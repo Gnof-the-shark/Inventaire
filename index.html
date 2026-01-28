@@ -37,7 +37,6 @@
         .active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* UI Elements */
         .card {
             background: var(--white); border-radius: 16px;
             padding: 12px; margin-bottom: 12px;
@@ -57,14 +56,12 @@
             cursor: pointer;
         }
 
-        /* Grocery List Specific */
         .grocery-item { display: flex; align-items: center; width: 100%; }
-        .grocery-check { width: 24px; height: 24px; border-radius: 12px; border: 2px solid #D1D1D6; margin-right: 15px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .grocery-check { width: 24px; height: 24px; border-radius: 12px; border: 2px solid #D1D1D6; margin-right: 15px; display: flex; align-items: center; justify-content: center; }
         .grocery-check.checked { background: var(--accent); border-color: var(--accent); }
         .grocery-check.checked::after { content: '✓'; color: white; font-size: 14px; }
         .strikethrough { text-decoration: line-through; color: var(--gray); }
 
-        /* Nav */
         nav {
             position: fixed; bottom: 0; width: 100%; background: rgba(255,255,255,0.95);
             backdrop-filter: blur(20px); display: flex; border-top: 0.5px solid #C6C6C8;
@@ -73,7 +70,6 @@
         nav button {
             flex: 1; padding: 12px 0; border: none; background: none;
             font-size: 10px; color: var(--gray); display: flex; flex-direction: column; align-items: center; gap: 4px;
-            cursor: pointer;
         }
         nav button.active { color: var(--accent); font-weight: bold; }
         nav button i { font-style: normal; font-size: 20px; }
@@ -81,18 +77,9 @@
         .btn {
             background: var(--accent); color: white; border: none; padding: 15px;
             border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; margin-top: 10px;
-            cursor: pointer;
         }
         
-        #video-container { 
-            width: 100%; 
-            border-radius: 15px; 
-            overflow: hidden; 
-            background: #000; 
-            margin-bottom: 10px;
-            position: relative;
-            min-height: 200px;
-        }
+        #video-container { width: 100%; border-radius: 15px; overflow: hidden; background: #000; min-height: 200px; }
         video { width: 100%; display: block; }
 
         .loader {
@@ -104,15 +91,14 @@
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
         .error-message {
-            background: #FFE5E5; color: #D8000C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; border: 1px solid #D8000C; display: none;
+            background: #FFE5E5; color: #D8000C; padding: 10px; border-radius: 8px; margin: 15px; font-size: 14px; border: 1px solid #D8000C; display: none;
         }
 
-        /* Locations Manager */
         .location-tag {
-            background: #E5E5EA; padding: 6px 12px; border-radius: 20px; font-size: 14px;
+            background: #E5E5EA; padding: 6px 12px; border-radius: 20px; font-size: 13px;
             display: flex; align-items: center; gap: 8px; margin: 4px;
         }
-        .location-tag button { background: none; border: none; color: var(--danger); font-weight: bold; padding: 0; cursor: pointer; }
+        .location-tag button { background: none; border: none; color: var(--danger); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -131,7 +117,7 @@
         <div style="background:#E3E3E8; border-radius:10px; padding:8px 12px; margin-bottom:15px; display:flex;">
             🔍 <input type="text" id="search" placeholder="Rechercher..." style="background:none; border:none; margin-left:8px; width:100%; outline:none;" oninput="renderInventory()">
         </div>
-        <div id="inventory-container">Chargement...</div>
+        <div id="inventory-container">Chargement en cours...</div>
     </div>
 
     <!-- AJOUT -->
@@ -147,23 +133,20 @@
             <button class="btn" style="background:#fff; color:var(--accent); border: 1px solid var(--accent);" onclick="toggleLocationManager()">⚙️ Gérer les emplacements</button>
         </div>
 
-        <!-- Gestionnaire d'emplacements -->
-        <div id="location-manager" style="display:none; background:white; padding:15px; border-radius:15px; margin-top:10px;">
-            <h4>Emplacements actuels</h4>
+        <div id="location-manager" style="display:none; background:white; padding:15px; border-radius:15px; margin-top:10px; border: 1px solid #ddd;">
+            <h4 style="margin-top:0">Emplacements</h4>
             <div id="locations-list" style="display:flex; flex-wrap:wrap; margin-bottom:15px;"></div>
             <div style="display:flex; gap:10px;">
-                <input type="text" id="new-location-input" placeholder="Nouvel emplacement..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                <input type="text" id="new-location-input" placeholder="Ex: Tiroir 4..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
                 <button onclick="addLocation()" style="background:var(--primary); color:white; border:none; padding:10px; border-radius:8px;">Ajouter</button>
             </div>
-            <button class="btn" style="background:#eee; color:#000; font-size:14px; padding:8px;" onclick="toggleLocationManager()">Fermer</button>
+            <button class="btn" style="background:#eee; color:#000; font-size:14px; padding:8px; margin-top:15px" onclick="toggleLocationManager()">Retour au scan</button>
         </div>
         
         <div id="preview-ui" style="display:none; text-align:center;">
             <div id="prod-info"></div>
             <label style="display:block; margin-top:15px; font-weight:bold; font-size:14px; text-align:left;">Où ranger ce produit ?</label>
-            <select id="prod-cat" style="width:100%; padding:12px; margin-top:5px; border-radius:10px; border:1px solid #ddd; font-size:16px;">
-                <!-- Rempli par JS -->
-            </select>
+            <select id="prod-cat" style="width:100%; padding:12px; margin-top:5px; border-radius:10px; border:1px solid #ddd; font-size:16px;"></select>
             <button class="btn" onclick="confirmAdd()">💾 Enregistrer au Stock</button>
             <button class="btn" style="background:#eee; color:#000;" onclick="cancelAdd()">Annuler</button>
         </div>
@@ -172,28 +155,28 @@
     <!-- ÉPICERIE -->
     <div id="page-grocery" class="page">
         <div style="display:flex; gap:10px; margin-bottom:20px;">
-            <input type="text" id="grocery-input" placeholder="Ajouter un article..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd;">
+            <input type="text" id="grocery-input" placeholder="Ajouter à la liste..." style="flex:1; padding:12px; border-radius:10px; border:1px solid #ddd;">
             <button onclick="addToGrocery()" style="background:var(--accent); color:white; border:none; width:45px; border-radius:10px; font-size:20px;">+</button>
         </div>
         <div id="grocery-container"></div>
     </div>
 
     <nav>
-        <button onclick="switchPage('list')" id="nav-list" class="active"><i>📦</i>Inventaire</button>
+        <button onclick="switchPage('list')" id="nav-list" class="active"><i>📦</i>Stock</button>
         <button onclick="switchPage('add')" id="nav-add"><i>➕</i>Ajouter</button>
-        <button onclick="switchPage('grocery')" id="nav-grocery"><i>🛒</i>Épicerie</button>
+        <button onclick="switchPage('grocery')" id="nav-grocery"><i>🛒</i>Liste</button>
     </nav>
 
     <script>
+        // REMPLACEZ BIEN PAR VOTRE URL DE DÉPLOIEMENT
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqnnnL8MvfdvzO2w-5Pnrzl8vtXdhM6TZumOPFib6MyViXwUNICFVPD0AJsFtx/exec";
         
         let inventory = [];
         let grocery = [];
-        let locations = ["Tiroir 1 (Haut)", "Tiroir 2", "Tiroir 3", "Bac du bas", "Porte"];
+        let locations = ["Tiroir 1", "Tiroir 2", "Bac du bas", "Porte"];
         let tempProd = null;
         const reader = new ZXing.BrowserMultiFormatReader();
 
-        // --- GESTION LOCATIONS ---
         function loadLocations() {
             const saved = localStorage.getItem('freezer_locations');
             if(saved) locations = JSON.parse(saved);
@@ -216,15 +199,10 @@
         function toggleLocationManager() {
             const div = document.getElementById('location-manager');
             const scanUI = document.getElementById('scan-ui');
-            if(div.style.display === 'none') {
-                div.style.display = 'block';
-                scanUI.querySelector('button:not(:last-child)').style.display = 'none'; // Cache scan buttons
-                document.getElementById('video-container').style.display = 'none';
-            } else {
-                div.style.display = 'none';
-                document.getElementById('start-scan-btn').style.display = 'block';
-                document.getElementById('video-container').style.display = 'block';
-            }
+            const isHidden = div.style.display === 'none';
+            div.style.display = isHidden ? 'block' : 'none';
+            scanUI.style.display = isHidden ? 'none' : 'block';
+            if(!isHidden) startScan();
         }
 
         function addLocation() {
@@ -239,71 +217,68 @@
         }
 
         function removeLocation(index) {
-            if(confirm(`Supprimer l'emplacement "${locations[index]}" ?`)) {
-                locations.splice(index, 1);
-                localStorage.setItem('freezer_locations', JSON.stringify(locations));
-                updateLocationUI();
-            }
+            locations.splice(index, 1);
+            localStorage.setItem('freezer_locations', JSON.stringify(locations));
+            updateLocationUI();
         }
 
         function showError(msg) {
             const box = document.getElementById('error-box');
             box.innerText = msg;
             box.style.display = msg ? 'block' : 'none';
-            if(msg) setTimeout(() => showError(""), 8000);
         }
 
         function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
+
+        async function callServer(params) {
+            showLoader(true);
+            showError("");
+            try {
+                // Utilisation de GET pour éviter les problèmes de CORS avec les redirects Google Script
+                const query = new URLSearchParams(params).toString();
+                const response = await fetch(`${SCRIPT_URL}?${query}`, { method: 'GET' });
+                
+                if (!response.ok) throw new Error("Erreur serveur");
+                
+                const result = await response.json();
+                showLoader(false);
+                return result;
+            } catch (e) {
+                console.error(e);
+                showLoader(false);
+                showError("Lien serveur rompu. Vérifiez l'URL du script et l'accès 'Tout le monde'.");
+                return null;
+            }
+        }
 
         function switchPage(p) {
             document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
             document.getElementById('page-' + p).classList.add('active');
             document.getElementById('nav-' + p).classList.add('active');
-            
             document.getElementById('page-title').innerText = p === 'list' ? 'Inventaire' : (p === 'add' ? 'Ajout' : 'Épicerie');
             document.getElementById('clear-btn').style.display = (p === 'grocery') ? 'block' : 'none';
-            
             reader.reset();
-            
             if(p === 'list') loadInventory();
             if(p === 'grocery') loadGrocery();
-            if(p === 'add') {
-                cancelAdd();
-                document.getElementById('location-manager').style.display = 'none';
-            }
+            if(p === 'add') cancelAdd();
         }
 
-        // --- INVENTAIRE ---
         async function loadInventory() {
-            showLoader(true);
-            try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
-                const r = await fetch(SCRIPT_URL + "?target=inventory", { signal: controller.signal });
-                clearTimeout(timeoutId);
-                if (!r.ok) throw new Error("Réponse serveur non valide");
-                const data = await r.json();
-                inventory = Array.isArray(data) ? data : [];
+            const data = await callServer({ target: "inventory" });
+            if (data) {
+                inventory = data;
                 renderInventory();
-            } catch(e) { 
-                console.error("Erreur de chargement:", e);
-                showError("Lien serveur rompu. Vérifiez vos permissions Google Script.");
-                document.getElementById('inventory-container').innerHTML = "<p style='color:red; text-align:center;'>Erreur de connexion</p>";
             }
-            showLoader(false);
         }
 
         function renderInventory() {
             const q = document.getElementById('search').value.toLowerCase();
             const container = document.getElementById('inventory-container');
-            const items = inventory.filter(i => 
-                (i.nom && i.nom.toLowerCase().includes(q)) || 
-                (i.categorie && i.categorie.toLowerCase().includes(q))
-            );
+            const items = inventory.filter(i => (i.nom && i.nom.toLowerCase().includes(q)) || (i.categorie && i.categorie.toLowerCase().includes(q)));
             
             if(items.length === 0) {
-                container.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>Aucun produit trouvé</p>";
+                container.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>Aucun article</p>";
                 return;
             }
 
@@ -324,62 +299,45 @@
         }
 
         async function updateStock(bc, nq) {
-            showLoader(true);
             const action = nq < 1 ? "delete" : "update";
-            try {
-                await fetch(SCRIPT_URL, { 
-                    method: "POST", 
-                    mode: "no-cors", 
-                    body: JSON.stringify({ action, barcode: bc, quantity: nq, target: "inventory" }) 
-                });
-                setTimeout(loadInventory, 1000);
-            } catch (e) {
-                showError("Erreur de mise à jour.");
-                showLoader(false);
-            }
+            await callServer({ action, barcode: bc, quantity: nq, target: "inventory" });
+            loadInventory();
         }
 
-        // --- SCANNER ---
         async function startScan() {
             document.getElementById('start-scan-btn').style.display = 'none';
             try {
-                await reader.decodeFromVideoDevice(undefined, 'video', async (res, err) => {
+                await reader.decodeFromVideoDevice(undefined, 'video', async (res) => {
                     if (res) {
                         reader.reset();
                         showLoader(true);
-                        try {
-                            const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${res.text}.json`);
-                            const d = await r.json();
-                            showLoader(false);
-                            if(d.status === 1) {
-                                tempProd = { 
-                                    name: d.product.product_name || "Produit sans nom", 
-                                    brand: d.product.brands || "Inconnu", 
-                                    image: d.product.image_front_small_url || "", 
-                                    barcode: d.product.code 
-                                };
-                                showPreview();
-                            } else { 
-                                alert("Produit inconnu. Veuillez l'ajouter manuellement."); 
-                                cancelAdd(); 
-                            }
-                        } catch(e) { 
-                            showLoader(false);
-                            alert("Problème de connexion OpenFoodFacts.");
+                        const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${res.text}.json`);
+                        const d = await r.json();
+                        showLoader(false);
+                        if(d.status === 1) {
+                            tempProd = { 
+                                name: d.product.product_name || "Inconnu", 
+                                brand: d.product.brands || "-", 
+                                image: d.product.image_front_small_url || "", 
+                                barcode: d.product.code 
+                            };
+                            showPreview();
+                        } else {
+                            alert("Produit inconnu.");
+                            cancelAdd();
                         }
                     }
                 });
             } catch (err) {
-                console.error(err);
-                alert("Caméra indisponible ou refusée.");
+                alert("Erreur caméra.");
                 document.getElementById('start-scan-btn').style.display = 'block';
             }
         }
 
         function manualAdd() {
-            const n = prompt("Nom du produit :");
+            const n = prompt("Nom de l'article :");
             if(!n) return;
-            tempProd = { name: n, brand: "Manuel", image: "", barcode: "MAN-" + Date.now() };
+            tempProd = { name: n, brand: "Saisie manuelle", image: "", barcode: "M-" + Date.now() };
             showPreview();
         }
 
@@ -387,9 +345,8 @@
             document.getElementById('scan-ui').style.display = 'none';
             document.getElementById('preview-ui').style.display = 'block';
             document.getElementById('prod-info').innerHTML = `
-                <img src="${tempProd.image}" style="width:100px; border-radius:10px; margin-bottom:10px;" onerror="this.src='https://placehold.co/100x100?text=?'">
+                <img src="${tempProd.image}" style="width:80px; border-radius:10px;" onerror="this.src='https://placehold.co/100x100?text=?'">
                 <h3>${tempProd.name}</h3>
-                <p style="color:var(--gray)">${tempProd.brand}</p>
             `;
         }
 
@@ -398,39 +355,36 @@
             document.getElementById('preview-ui').style.display = 'none';
             document.getElementById('scan-ui').style.display = 'block';
             document.getElementById('start-scan-btn').style.display = 'block';
-            document.getElementById('video-container').style.display = 'block';
             tempProd = null;
         }
 
         async function confirmAdd() {
-            showLoader(true);
             const cat = document.getElementById('prod-cat').value;
-            const payload = { ...tempProd, action: "add", quantity: 1, category: cat, target: "inventory" };
-            try {
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
-                setTimeout(() => switchPage('list'), 1000);
-            } catch(e) {
-                showError("Erreur d'enregistrement.");
-                showLoader(false);
-            }
+            await callServer({ 
+                action: "add", 
+                target: "inventory",
+                barcode: tempProd.barcode,
+                name: tempProd.name,
+                brand: tempProd.brand,
+                image: tempProd.image,
+                quantity: 1,
+                category: cat
+            });
+            switchPage('list');
         }
 
-        // --- ÉPICERIE ---
         async function loadGrocery() {
-            showLoader(true);
-            try {
-                const r = await fetch(SCRIPT_URL + "?target=grocery");
-                const data = await r.json();
-                grocery = Array.isArray(data) ? data : [];
+            const data = await callServer({ target: "grocery" });
+            if (data) {
+                grocery = data;
                 renderGrocery();
-            } catch(e) {}
-            showLoader(false);
+            }
         }
 
         function renderGrocery() {
             const container = document.getElementById('grocery-container');
             if(grocery.length === 0) {
-                container.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>La liste est vide</p>";
+                container.innerHTML = "<p style='text-align:center; color:gray;'>Liste vide</p>";
                 return;
             }
             container.innerHTML = grocery.map(i => `
@@ -439,7 +393,7 @@
                         <div class="grocery-check ${i.coche ? 'checked' : ''}"></div>
                         <span class="${i.coche ? 'strikethrough' : ''}">${i.nom}</span>
                     </div>
-                    <button style="background:none; border:none; color:var(--danger); font-size:18px;" onclick="event.stopPropagation(); deleteGrocery('${i.nom}')">✕</button>
+                    <button style="background:none; border:none; color:var(--danger);" onclick="event.stopPropagation(); deleteGrocery('${i.nom}')">✕</button>
                 </div>
             `).join('');
         }
@@ -447,39 +401,25 @@
         async function addToGrocery() {
             const input = document.getElementById('grocery-input');
             if(!input.value) return;
-            showLoader(true);
-            try {
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "add", name: input.value, quantity: 1, target: "grocery" }) });
-                input.value = "";
-                setTimeout(loadGrocery, 1000);
-            } catch (e) {
-                showLoader(false);
-                showError("Erreur d'ajout.");
-            }
+            await callServer({ action: "add", name: input.value, target: "grocery" });
+            input.value = "";
+            loadGrocery();
         }
 
         async function toggleGrocery(name, checked) {
-            try {
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "toggleGrocery", name, checked, target: "grocery" }) });
-                loadGrocery();
-            } catch(e) {}
+            await callServer({ action: "toggleGrocery", name, checked, target: "grocery" });
+            loadGrocery();
         }
 
         async function deleteGrocery(name) {
-            try {
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", name, target: "grocery" }) });
-                loadGrocery();
-            } catch(e) {}
+            await callServer({ action: "delete", name, target: "grocery" });
+            loadGrocery();
         }
 
         async function clearGroceryList() {
-            if(!confirm("Vider toute la liste ?")) return;
-            showLoader(true);
-            try {
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "clearGrocery", target: "grocery" }) });
-                setTimeout(loadGrocery, 1000);
-            } catch(e) {
-                showLoader(false);
+            if(confirm("Vider la liste ?")) {
+                await callServer({ action: "clearGrocery", target: "grocery" });
+                loadGrocery();
             }
         }
 
