@@ -37,7 +37,7 @@
         .active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* UI Éléments */
+        /* UI Elements */
         .card {
             background: var(--white); border-radius: 16px;
             padding: 12px; margin-bottom: 12px;
@@ -54,6 +54,7 @@
         .btn-circle {
             width: 32px; height: 32px; border-radius: 16px; border: 1px solid #E5E5EA;
             background: #fff; color: var(--primary); font-size: 18px; font-weight: bold;
+            cursor: pointer;
         }
 
         /* Grocery List Specific */
@@ -72,6 +73,7 @@
         nav button {
             flex: 1; padding: 12px 0; border: none; background: none;
             font-size: 10px; color: var(--gray); display: flex; flex-direction: column; align-items: center; gap: 4px;
+            cursor: pointer;
         }
         nav button.active { color: var(--accent); font-weight: bold; }
         nav button i { font-style: normal; font-size: 20px; }
@@ -79,9 +81,18 @@
         .btn {
             background: var(--accent); color: white; border: none; padding: 15px;
             border-radius: 12px; width: 100%; font-size: 16px; font-weight: 600; margin-top: 10px;
+            cursor: pointer;
         }
         
-        #video-container { width: 100%; border-radius: 15px; overflow: hidden; background: #000; }
+        #video-container { 
+            width: 100%; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            background: #000; 
+            margin-bottom: 10px;
+            position: relative;
+            min-height: 200px;
+        }
         video { width: 100%; display: block; }
 
         .loader {
@@ -91,6 +102,10 @@
         }
         .spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        .error-message {
+            background: #FFE5E5; color: #D8000C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; border: 1px solid #D8000C; display: none;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +116,8 @@
         <h1 id="page-title">Inventaire</h1>
         <button id="clear-btn" style="display:none; color:var(--danger); background:none; border:none; font-weight:600;" onclick="clearGroceryList()">Vider</button>
     </header>
+
+    <div id="error-box" class="error-message"></div>
 
     <!-- INVENTAIRE -->
     <div id="page-list" class="page active">
@@ -113,10 +130,13 @@
     <!-- AJOUT -->
     <div id="page-add" class="page">
         <div id="scan-ui">
-            <div id="video-container"><video id="video"></video></div>
-            <button class="btn" onclick="startScan()">📷 Scanner Code-Barres</button>
+            <div id="video-container">
+                <video id="video"></video>
+            </div>
+            <button class="btn" id="start-scan-btn" onclick="startScan()">📷 Scanner Code-Barres</button>
             <button class="btn" style="background:#E5E5EA; color:#000;" onclick="manualAdd()">✏️ Saisie Manuelle</button>
         </div>
+        
         <div id="preview-ui" style="display:none; text-align:center;">
             <div id="prod-info"></div>
             <select id="prod-cat" style="width:100%; padding:12px; margin-top:15px; border-radius:10px; border:1px solid #ddd;">
@@ -143,11 +163,26 @@
     </nav>
 
     <script>
+        /**
+         * IMPORTANT : CONFIGURATION DU SCRIPT GOOGLE
+         * 1. Dans l'éditeur Google Apps Script, cliquez sur "Déployer" > "Nouvel déploiement".
+         * 2. Type : "Application Web".
+         * 3. Qui a accès : "Tout le monde" (Même anonyme). C'est CRUCIAL pour éviter l'erreur Fetch.
+         * 4. Copiez l'URL de l'application Web et remplacez SCRIPT_URL ci-dessous.
+         */
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqnnnL8MvfdvzO2w-5Pnrzl8vtXdhM6TZumOPFib6MyViXwUNICFVPD0AJsFtx/exec";
+        
         let inventory = [];
         let grocery = [];
         let tempProd = null;
         const reader = new ZXing.BrowserMultiFormatReader();
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.innerText = msg;
+            box.style.display = msg ? 'block' : 'none';
+            if(msg) setTimeout(() => showError(""), 8000);
+        }
 
         function showLoader(s) { document.getElementById('loader').style.display = s ? 'flex' : 'none'; }
 
@@ -160,27 +195,50 @@
             document.getElementById('page-title').innerText = p === 'list' ? 'Inventaire' : (p === 'add' ? 'Ajout' : 'Épicerie');
             document.getElementById('clear-btn').style.display = (p === 'grocery') ? 'block' : 'none';
             
+            reader.reset();
+            
             if(p === 'list') loadInventory();
             if(p === 'grocery') loadGrocery();
-            if(p !== 'add') { reader.reset(); cancelAdd(); }
+            if(p === 'add') cancelAdd();
         }
 
         // --- INVENTAIRE ---
         async function loadInventory() {
             showLoader(true);
             try {
-                const r = await fetch(SCRIPT_URL + "?target=inventory");
-                inventory = await r.json();
+                // Ajout d'un timeout pour éviter que le fetch ne bloque indéfiniment
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+                const r = await fetch(SCRIPT_URL + "?target=inventory", { signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!r.ok) throw new Error("Réponse serveur non valide");
+                
+                const data = await r.json();
+                inventory = Array.isArray(data) ? data : [];
                 renderInventory();
-            } catch(e) { console.error(e); }
+            } catch(e) { 
+                console.error("Erreur de chargement:", e);
+                showError("Impossible de joindre le serveur. Vérifiez l'URL de votre Google Script et ses permissions.");
+                document.getElementById('inventory-container').innerHTML = "<p style='color:red; text-align:center;'>Erreur de connexion</p>";
+            }
             showLoader(false);
         }
 
         function renderInventory() {
             const q = document.getElementById('search').value.toLowerCase();
             const container = document.getElementById('inventory-container');
-            const items = inventory.filter(i => i.nom.toLowerCase().includes(q) || i.categorie.toLowerCase().includes(q));
+            const items = inventory.filter(i => 
+                (i.nom && i.nom.toLowerCase().includes(q)) || 
+                (i.categorie && i.categorie.toLowerCase().includes(q))
+            );
             
+            if(items.length === 0) {
+                container.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>Aucun produit trouvé</p>";
+                return;
+            }
+
             container.innerHTML = items.map(i => `
                 <div class="card">
                     <img src="${i.image}" class="item-img" onerror="this.src='https://placehold.co/100x100?text=?'">
@@ -189,9 +247,9 @@
                         <span>${i.categorie} • ${i.marque}</span>
                     </div>
                     <div class="qty-ctrl">
-                        <button class="btn-circle" onclick="updateStock('${i.barcode}', ${i.quantite - 1})">−</button>
+                        <button class="btn-circle" onclick="updateStock('${i.barcode}', ${parseInt(i.quantite) - 1})">−</button>
                         <b style="min-width:20px; text-align:center;">${i.quantite}</b>
-                        <button class="btn-circle" onclick="updateStock('${i.barcode}', ${i.quantite + 1})">+</button>
+                        <button class="btn-circle" onclick="updateStock('${i.barcode}', ${parseInt(i.quantite) + 1})">+</button>
                     </div>
                 </div>
             `).join('');
@@ -200,44 +258,79 @@
         async function updateStock(bc, nq) {
             showLoader(true);
             const action = nq < 1 ? "delete" : "update";
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action, barcode: bc, quantity: nq, target: "inventory" }) });
-            setTimeout(loadInventory, 800);
+            try {
+                await fetch(SCRIPT_URL, { 
+                    method: "POST", 
+                    mode: "no-cors", 
+                    body: JSON.stringify({ action, barcode: bc, quantity: nq, target: "inventory" }) 
+                });
+                // no-cors ne permet pas de lire la réponse, on attend juste un peu
+                setTimeout(loadInventory, 1000);
+            } catch (e) {
+                showError("Erreur de mise à jour.");
+                showLoader(false);
+            }
         }
 
-        // --- AJOUT ---
-        function startScan() {
-            document.getElementById('scan-ui').style.display = 'none';
-            reader.decodeFromVideoDevice(null, 'video', async (res) => {
-                if(res) {
-                    showLoader(true);
-                    const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${res.text}.json`);
-                    const d = await r.json();
-                    showLoader(false);
-                    if(d.status === 1) {
-                        tempProd = { name: d.product.product_name, brand: d.product.brands, image: d.product.image_front_small_url, barcode: d.product.code };
-                        showPreview();
-                    } else { alert("Produit inconnu"); cancelAdd(); }
-                }
-            });
+        // --- SCANNER ---
+        async function startScan() {
+            document.getElementById('start-scan-btn').style.display = 'none';
+            try {
+                await reader.decodeFromVideoDevice(undefined, 'video', async (res, err) => {
+                    if (res) {
+                        reader.reset();
+                        showLoader(true);
+                        try {
+                            const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${res.text}.json`);
+                            const d = await r.json();
+                            showLoader(false);
+                            if(d.status === 1) {
+                                tempProd = { 
+                                    name: d.product.product_name || "Produit sans nom", 
+                                    brand: d.product.brands || "Inconnu", 
+                                    image: d.product.image_front_small_url || "", 
+                                    barcode: d.product.code 
+                                };
+                                showPreview();
+                            } else { 
+                                alert("Produit non trouvé. Saisie manuelle suggérée."); 
+                                cancelAdd(); 
+                            }
+                        } catch(e) { 
+                            showLoader(false);
+                            alert("Erreur de connexion API OpenFoodFacts.");
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+                alert("Erreur d'accès à la caméra.");
+                document.getElementById('start-scan-btn').style.display = 'block';
+            }
         }
 
         function manualAdd() {
             const n = prompt("Nom du produit :");
             if(!n) return;
-            tempProd = { name: n, brand: "Manuel", image: "", barcode: "" };
+            tempProd = { name: n, brand: "Manuel", image: "", barcode: "MAN-" + Date.now() };
             showPreview();
         }
 
         function showPreview() {
-            reader.reset();
             document.getElementById('scan-ui').style.display = 'none';
             document.getElementById('preview-ui').style.display = 'block';
-            document.getElementById('prod-info').innerHTML = `<h3>${tempProd.name}</h3><p>${tempProd.brand}</p>`;
+            document.getElementById('prod-info').innerHTML = `
+                <img src="${tempProd.image}" style="width:100px; border-radius:10px; margin-bottom:10px;" onerror="this.src='https://placehold.co/100x100?text=?'">
+                <h3>${tempProd.name}</h3>
+                <p style="color:var(--gray)">${tempProd.brand}</p>
+            `;
         }
 
         function cancelAdd() {
+            reader.reset();
             document.getElementById('preview-ui').style.display = 'none';
             document.getElementById('scan-ui').style.display = 'block';
+            document.getElementById('start-scan-btn').style.display = 'block';
             tempProd = null;
         }
 
@@ -245,8 +338,13 @@
             showLoader(true);
             const cat = document.getElementById('prod-cat').value;
             const payload = { ...tempProd, action: "add", quantity: 1, category: cat, target: "inventory" };
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
-            setTimeout(() => switchPage('list'), 1000);
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+                setTimeout(() => switchPage('list'), 1000);
+            } catch(e) {
+                showError("Erreur lors de l'enregistrement.");
+                showLoader(false);
+            }
         }
 
         // --- ÉPICERIE ---
@@ -254,14 +352,21 @@
             showLoader(true);
             try {
                 const r = await fetch(SCRIPT_URL + "?target=grocery");
-                grocery = await r.json();
+                const data = await r.json();
+                grocery = Array.isArray(data) ? data : [];
                 renderGrocery();
-            } catch(e) {}
+            } catch(e) {
+                console.error(e);
+            }
             showLoader(false);
         }
 
         function renderGrocery() {
             const container = document.getElementById('grocery-container');
+            if(grocery.length === 0) {
+                container.innerHTML = "<p style='text-align:center; padding:20px; color:gray;'>La liste est vide</p>";
+                return;
+            }
             container.innerHTML = grocery.map(i => `
                 <div class="card" onclick="toggleGrocery('${i.nom}', ${!i.coche})">
                     <div class="grocery-item">
@@ -277,26 +382,39 @@
             const input = document.getElementById('grocery-input');
             if(!input.value) return;
             showLoader(true);
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "add", name: input.value, quantity: 1, target: "grocery" }) });
-            input.value = "";
-            setTimeout(loadGrocery, 800);
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "add", name: input.value, quantity: 1, target: "grocery" }) });
+                input.value = "";
+                setTimeout(loadGrocery, 1000);
+            } catch (e) {
+                showLoader(false);
+                showError("Erreur d'ajout.");
+            }
         }
 
         async function toggleGrocery(name, checked) {
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "toggleGrocery", name, checked, target: "grocery" }) });
-            loadGrocery();
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "toggleGrocery", name, checked, target: "grocery" }) });
+                loadGrocery();
+            } catch(e) {}
         }
 
         async function deleteGrocery(name) {
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", name, target: "grocery" }) });
-            loadGrocery();
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "delete", name, target: "grocery" }) });
+                loadGrocery();
+            } catch(e) {}
         }
 
         async function clearGroceryList() {
             if(!confirm("Vider toute la liste ?")) return;
             showLoader(true);
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "clearGrocery", target: "grocery" }) });
-            setTimeout(loadGrocery, 800);
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify({ action: "clearGrocery", target: "grocery" }) });
+                setTimeout(loadGrocery, 1000);
+            } catch(e) {
+                showLoader(false);
+            }
         }
 
         window.onload = loadInventory;
