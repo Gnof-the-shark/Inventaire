@@ -106,6 +106,13 @@
         .error-message {
             background: #FFE5E5; color: #D8000C; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 14px; border: 1px solid #D8000C; display: none;
         }
+
+        /* Locations Manager */
+        .location-tag {
+            background: #E5E5EA; padding: 6px 12px; border-radius: 20px; font-size: 14px;
+            display: flex; align-items: center; gap: 8px; margin: 4px;
+        }
+        .location-tag button { background: none; border: none; color: var(--danger); font-weight: bold; padding: 0; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -135,12 +142,27 @@
             </div>
             <button class="btn" id="start-scan-btn" onclick="startScan()">📷 Scanner Code-Barres</button>
             <button class="btn" style="background:#E5E5EA; color:#000;" onclick="manualAdd()">✏️ Saisie Manuelle</button>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #D1D1D6;">
+            <button class="btn" style="background:#fff; color:var(--accent); border: 1px solid var(--accent);" onclick="toggleLocationManager()">⚙️ Gérer les emplacements</button>
+        </div>
+
+        <!-- Gestionnaire d'emplacements -->
+        <div id="location-manager" style="display:none; background:white; padding:15px; border-radius:15px; margin-top:10px;">
+            <h4>Emplacements actuels</h4>
+            <div id="locations-list" style="display:flex; flex-wrap:wrap; margin-bottom:15px;"></div>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="new-location-input" placeholder="Nouvel emplacement..." style="flex:1; padding:10px; border-radius:8px; border:1px solid #ddd;">
+                <button onclick="addLocation()" style="background:var(--primary); color:white; border:none; padding:10px; border-radius:8px;">Ajouter</button>
+            </div>
+            <button class="btn" style="background:#eee; color:#000; font-size:14px; padding:8px;" onclick="toggleLocationManager()">Fermer</button>
         </div>
         
         <div id="preview-ui" style="display:none; text-align:center;">
             <div id="prod-info"></div>
-            <select id="prod-cat" style="width:100%; padding:12px; margin-top:15px; border-radius:10px; border:1px solid #ddd;">
-                <option>Tiroir 1 (Haut)</option><option>Tiroir 2</option><option>Tiroir 3</option><option>Bac du bas</option><option>Porte</option>
+            <label style="display:block; margin-top:15px; font-weight:bold; font-size:14px; text-align:left;">Où ranger ce produit ?</label>
+            <select id="prod-cat" style="width:100%; padding:12px; margin-top:5px; border-radius:10px; border:1px solid #ddd; font-size:16px;">
+                <!-- Rempli par JS -->
             </select>
             <button class="btn" onclick="confirmAdd()">💾 Enregistrer au Stock</button>
             <button class="btn" style="background:#eee; color:#000;" onclick="cancelAdd()">Annuler</button>
@@ -163,19 +185,66 @@
     </nav>
 
     <script>
-        /**
-         * IMPORTANT : CONFIGURATION DU SCRIPT GOOGLE
-         * 1. Dans l'éditeur Google Apps Script, cliquez sur "Déployer" > "Nouvel déploiement".
-         * 2. Type : "Application Web".
-         * 3. Qui a accès : "Tout le monde" (Même anonyme). C'est CRUCIAL pour éviter l'erreur Fetch.
-         * 4. Copiez l'URL de l'application Web et remplacez SCRIPT_URL ci-dessous.
-         */
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyqnnnL8MvfdvzO2w-5Pnrzl8vtXdhM6TZumOPFib6MyViXwUNICFVPD0AJsFtx/exec";
         
         let inventory = [];
         let grocery = [];
+        let locations = ["Tiroir 1 (Haut)", "Tiroir 2", "Tiroir 3", "Bac du bas", "Porte"];
         let tempProd = null;
         const reader = new ZXing.BrowserMultiFormatReader();
+
+        // --- GESTION LOCATIONS ---
+        function loadLocations() {
+            const saved = localStorage.getItem('freezer_locations');
+            if(saved) locations = JSON.parse(saved);
+            updateLocationUI();
+        }
+
+        function updateLocationUI() {
+            const list = document.getElementById('locations-list');
+            list.innerHTML = locations.map((loc, index) => `
+                <div class="location-tag">
+                    ${loc}
+                    <button onclick="removeLocation(${index})">✕</button>
+                </div>
+            `).join('');
+
+            const select = document.getElementById('prod-cat');
+            select.innerHTML = locations.map(loc => `<option value="${loc}">${loc}</option>`).join('');
+        }
+
+        function toggleLocationManager() {
+            const div = document.getElementById('location-manager');
+            const scanUI = document.getElementById('scan-ui');
+            if(div.style.display === 'none') {
+                div.style.display = 'block';
+                scanUI.querySelector('button:not(:last-child)').style.display = 'none'; // Cache scan buttons
+                document.getElementById('video-container').style.display = 'none';
+            } else {
+                div.style.display = 'none';
+                document.getElementById('start-scan-btn').style.display = 'block';
+                document.getElementById('video-container').style.display = 'block';
+            }
+        }
+
+        function addLocation() {
+            const input = document.getElementById('new-location-input');
+            const val = input.value.trim();
+            if(val && !locations.includes(val)) {
+                locations.push(val);
+                localStorage.setItem('freezer_locations', JSON.stringify(locations));
+                input.value = "";
+                updateLocationUI();
+            }
+        }
+
+        function removeLocation(index) {
+            if(confirm(`Supprimer l'emplacement "${locations[index]}" ?`)) {
+                locations.splice(index, 1);
+                localStorage.setItem('freezer_locations', JSON.stringify(locations));
+                updateLocationUI();
+            }
+        }
 
         function showError(msg) {
             const box = document.getElementById('error-box');
@@ -199,28 +268,27 @@
             
             if(p === 'list') loadInventory();
             if(p === 'grocery') loadGrocery();
-            if(p === 'add') cancelAdd();
+            if(p === 'add') {
+                cancelAdd();
+                document.getElementById('location-manager').style.display = 'none';
+            }
         }
 
         // --- INVENTAIRE ---
         async function loadInventory() {
             showLoader(true);
             try {
-                // Ajout d'un timeout pour éviter que le fetch ne bloque indéfiniment
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 10000);
-
                 const r = await fetch(SCRIPT_URL + "?target=inventory", { signal: controller.signal });
                 clearTimeout(timeoutId);
-                
                 if (!r.ok) throw new Error("Réponse serveur non valide");
-                
                 const data = await r.json();
                 inventory = Array.isArray(data) ? data : [];
                 renderInventory();
             } catch(e) { 
                 console.error("Erreur de chargement:", e);
-                showError("Impossible de joindre le serveur. Vérifiez l'URL de votre Google Script et ses permissions.");
+                showError("Lien serveur rompu. Vérifiez vos permissions Google Script.");
                 document.getElementById('inventory-container').innerHTML = "<p style='color:red; text-align:center;'>Erreur de connexion</p>";
             }
             showLoader(false);
@@ -264,7 +332,6 @@
                     mode: "no-cors", 
                     body: JSON.stringify({ action, barcode: bc, quantity: nq, target: "inventory" }) 
                 });
-                // no-cors ne permet pas de lire la réponse, on attend juste un peu
                 setTimeout(loadInventory, 1000);
             } catch (e) {
                 showError("Erreur de mise à jour.");
@@ -293,18 +360,18 @@
                                 };
                                 showPreview();
                             } else { 
-                                alert("Produit non trouvé. Saisie manuelle suggérée."); 
+                                alert("Produit inconnu. Veuillez l'ajouter manuellement."); 
                                 cancelAdd(); 
                             }
                         } catch(e) { 
                             showLoader(false);
-                            alert("Erreur de connexion API OpenFoodFacts.");
+                            alert("Problème de connexion OpenFoodFacts.");
                         }
                     }
                 });
             } catch (err) {
                 console.error(err);
-                alert("Erreur d'accès à la caméra.");
+                alert("Caméra indisponible ou refusée.");
                 document.getElementById('start-scan-btn').style.display = 'block';
             }
         }
@@ -331,6 +398,7 @@
             document.getElementById('preview-ui').style.display = 'none';
             document.getElementById('scan-ui').style.display = 'block';
             document.getElementById('start-scan-btn').style.display = 'block';
+            document.getElementById('video-container').style.display = 'block';
             tempProd = null;
         }
 
@@ -342,7 +410,7 @@
                 await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
                 setTimeout(() => switchPage('list'), 1000);
             } catch(e) {
-                showError("Erreur lors de l'enregistrement.");
+                showError("Erreur d'enregistrement.");
                 showLoader(false);
             }
         }
@@ -355,9 +423,7 @@
                 const data = await r.json();
                 grocery = Array.isArray(data) ? data : [];
                 renderGrocery();
-            } catch(e) {
-                console.error(e);
-            }
+            } catch(e) {}
             showLoader(false);
         }
 
@@ -417,7 +483,10 @@
             }
         }
 
-        window.onload = loadInventory;
+        window.onload = () => {
+            loadLocations();
+            loadInventory();
+        };
     </script>
 </body>
 </html>
